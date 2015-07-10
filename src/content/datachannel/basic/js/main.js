@@ -34,9 +34,9 @@ function disableSendButton() {
 
 function createConnection() {
   dataChannelSend.placeholder = '';
-  var servers = null;
-  pcConstraint = null;
-  dataConstraint = null;
+  var servers = null;//{ "iceServers": [{ "url": "stun:stun.l.google.com:19302" }] };
+  pcConstraint = null;//{video: true, audio: false};
+  dataConstraint =  null;//{reliable: false};
   trace('Using SCTP based data channels');
   // SCTP is supported from Chrome 31 and is supported in FF.
   // No need to pass DTLS constraint as it is on by default in Chrome 31.

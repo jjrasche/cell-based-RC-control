@@ -184,6 +184,7 @@ if (navigator.mozGetUserMedia) {
   // The RTCPeerConnection object.
   window.RTCPeerConnection = function(pcConfig, pcConstraints) {
     var pc = new webkitRTCPeerConnection(pcConfig, pcConstraints);
+    console.log(pc);
     var origGetStats = pc.getStats.bind(pc);
     pc.getStats = function(selector, successCallback, errorCallback) { // jshint ignore: line
       // If selector is a function then we are in the old style stats so just
@@ -221,6 +222,8 @@ if (navigator.mozGetUserMedia) {
   // add promise support
   ['createOffer', 'createAnswer'].forEach(function(method) {
     var nativeMethod = webkitRTCPeerConnection.prototype[method];
+    console.log(method);
+    console.log(nativeMethod);
     webkitRTCPeerConnection.prototype[method] = function() {
       var self = this;
       if (arguments.length < 1 || (arguments.length === 1 &&
