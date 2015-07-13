@@ -27,33 +27,33 @@ if (room === '') {
   //
 }
 
+console.log(io);
+console.log("sldfjkdlskfjsd");
 var socket = io.connect();
 
+// request to join a room
 if (room !== '') {
   console.log('Create or join room', room);
-  socket.emit('create or join', room);
+  socket.emit('create or join', room);        // ?? how does it know what to connect to ??
 }
 
-socket.on('created', function (room){
+// listen for responses from server 
+socket.on('created', function (room){   // you are first in room
   console.log('Created room ' + room);
   isInitiator = true;
 });
-
-socket.on('full', function (room){
+socket.on('full', function (room){    // more than 2 people in room
   console.log('Room ' + room + ' is full');
 });
-
-socket.on('join', function (room){
+socket.on('join', function (room){    // a 2nd person joined the room you created
   console.log('Another peer made a request to join room ' + room);
   console.log('This peer is the initiator of room ' + room + '!');
   isChannelReady = true;
 });
-
-socket.on('joined', function (room){
+socket.on('joined', function (room){  // you are 2nd person in room
   console.log('This peer has joined room ' + room);
   isChannelReady = true;
 });
-
 socket.on('log', function (array){
   console.log.apply(console, array);
 });

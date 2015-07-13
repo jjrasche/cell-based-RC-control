@@ -54,9 +54,18 @@ Exchange network info
 */
 
 function createConnection() {
+  var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+
+var pc_constraints = {'optional': [{'DtlsSrtpKeyAgreement': true}]};
+
+// Set up audio and video regardless of what devices are present.
+var sdpConstraints = {'mandatory': {
+  'OfferToReceiveAudio':true,
+  'OfferToReceiveVideo':true }};
+  
   dataChannelSend.placeholder = '';
-  var servers = null;//{ "iceServers": [{ "url": "stun:stun.l.google.com:19302" }] };
-  pcConstraint = null;//{video: true, audio: false};
+  var servers = null;//{'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+  pcConstraint = null;//{'optional': [{'DtlsSrtpKeyAgreement': true}]};
   dataConstraint =  null;//{reliable: false};
   trace('Using SCTP based data channels');
   // SCTP is supported from Chrome 31 and is supported in FF.
@@ -134,6 +143,10 @@ function gotDescription1(desc) {
   console.log(desc);
   console.log(desc.toJSON());
   //  4) Alice stringifies the offer and uses a signaling mechanism to send it to Eve.
+  /*
+    This is where you woudld contact the signaling server with the requested room number.
+    and offer 
+  */
   remoteConnection.setRemoteDescription(desc);
   remoteConnection.createAnswer(gotDescription2,
       onCreateSessionDescriptionError);
