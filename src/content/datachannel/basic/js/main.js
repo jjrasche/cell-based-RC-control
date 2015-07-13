@@ -32,6 +32,27 @@ function disableSendButton() {
   sendButton.disabled = true;
 }
 
+/*
+detail:
+
+1) Alice creates an RTCPeerConnection object.
+2) Alice creates an offer (an SDP session description) with the RTCPeerConnection createOffer() method.
+3) Alice calls setLocalDescription() with her offer.
+4) Alice stringifies the offer and uses a signaling mechanism to send it to Eve.
+
+5) Eve calls setRemoteDescription() with Alice's offer, so that her RTCPeerConnection knows about Alice's setup.
+6) Eve calls createAnswer(), and the success callback for this is passed a local session description: Eve's answer.
+7) Eve sets her answer as the local description by calling setLocalDescription().
+8) Eve then uses the signaling mechanism to send her stringified answer back to Alice.
+9) Alice sets Eve's answer as the remote session description using setRemoteDescription().
+
+Exchange network info
+1) Alice creates an RTCPeerConnection object with an onicecandidate handler.
+2) The handler is called when network candidates become available.
+3) In the handler, Alice sends stringified candidate data to Eve, via their signaling channel.
+4) When Eve gets a candidate message from Alice, she calls addIceCandidate(), to add the candidate to the remote peer description.
+*/
+
 function createConnection() {
   dataChannelSend.placeholder = '';
   var servers = null;//{ "iceServers": [{ "url": "stun:stun.l.google.com:19302" }] };
@@ -42,6 +63,7 @@ function createConnection() {
   // No need to pass DTLS constraint as it is on by default in Chrome 31.
   // For SCTP, reliable and ordered is true by default.
   // Add localConnection to global scope to make it visible from the browser console.
+  //  1) Alice creates an RTCPeerConnection object.
   window.localConnection = localConnection =
       new RTCPeerConnection(servers, pcConstraint);
   trace('Created local peer connection object localConnection');
@@ -61,7 +83,12 @@ function createConnection() {
 
   remoteConnection.onicecandidate = iceCallback2;
   remoteConnection.ondatachannel = receiveChannelCallback;
-
+/*
+void createOffer(RTCSessionDescriptionCallback successCallback, 
+                 RTCPeerConnectionErrorCallback failureCallback, 
+                 optional MediaConstraints constraints);
+*/
+  //  2) Alice creates an offer (an SDP session description) with the RTCPeerConnection createOffer() method.
   localConnection.createOffer(gotDescription1, onCreateSessionDescriptionError);
   startButton.disabled = true;
   closeButton.disabled = false;
@@ -98,9 +125,15 @@ function closeDataChannels() {
   enableStartButton();
 }
 
+// callback called by createoffer() with offer (SDP)
 function gotDescription1(desc) {
+  //  3) Alice calls setLocalDescription() with her offer.
   localConnection.setLocalDescription(desc);
   trace('Offer from localConnection \n' + desc.sdp);
+  trace(' is the offer stringified? ');
+  console.log(desc);
+  console.log(desc.toJSON());
+  //  4) Alice stringifies the offer and uses a signaling mechanism to send it to Eve.
   remoteConnection.setRemoteDescription(desc);
   remoteConnection.createAnswer(gotDescription2,
       onCreateSessionDescriptionError);
