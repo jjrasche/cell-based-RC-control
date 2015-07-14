@@ -28,7 +28,7 @@ if (room === '') {
 }
 
 console.log(io);
-console.log("sldfjkdlskfjsd");
+console.log("sldfjkdlskfjsddsfsd");
 var socket = io.connect();
 
 // request to join a room
