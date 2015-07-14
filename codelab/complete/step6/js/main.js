@@ -27,13 +27,13 @@ if (room === '') {
   //
 }
 
-console.log(io);
-console.log("sldfjkdlskfjsddsfsd");
+// ?? how doest connect know who to connect to ??
 var socket = io.connect();
 
 // request to join a room
 if (room !== '') {
-  console.log('Create or join room', room);
+
+  console.log('Request room join: ', room);
   socket.emit('create or join', room);        // ?? how does it know what to connect to ??
 }
 
@@ -51,11 +51,11 @@ socket.on('join', function (room){    // a 2nd person joined the room you create
   isChannelReady = true;
 });
 socket.on('joined', function (room){  // you are 2nd person in room
-  console.log('This peer has joined room ' + room);
+  console.log('joined room ' + room);
   isChannelReady = true;
 });
 socket.on('log', function (array){
-  console.log.apply(console, array);
+  //console.log.apply(console, array);
 });
 
 ////////////////////////////////////////////////
@@ -69,7 +69,7 @@ function sendMessage(message){
 }
 
 socket.on('message', function (message){
-  console.log('Client received message:', message);
+  console.log('received: ', message);
   if (message === 'got user media') {
   	maybeStart();
   } else if (message.type === 'offer') {
@@ -93,14 +93,11 @@ socket.on('message', function (message){
 
 ////////////////////////////////////////////////////
 
-var localVideo = document.querySelector('#localVideo');
-var remoteVideo = document.querySelector('#remoteVideo');
-
+// initialize local objects
 function handleUserMedia(stream) {
   console.log('Adding local stream.');
   localVideo.src = window.URL.createObjectURL(stream);
   localStream = stream;
-  sendMessage('got user media');
   if (isInitiator) {
     maybeStart();
   }
@@ -110,21 +107,23 @@ function handleUserMediaError(error){
   console.log('getUserMedia error: ', error);
 }
 
-var constraints = {video: true};
-getUserMedia(constraints, handleUserMedia, handleUserMediaError);
+var localVideo = document.querySelector('#localVideo');
+var remoteVideo = document.querySelector('#remoteVideo')
+var constraints = {audio: true};
 
-console.log('Getting user media with constraints', constraints);
-
+getUserMedia(constraints, handleUserMedia, handleUserMediaError); // don't need for just data
 if (location.hostname != "localhost") {
   requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 }
 
+//
 function maybeStart() {
+  console.log("maybeStart: " + "!isStarted: " + (!isStarted) + ",  localStream defined: " + (typeof localStream != 'undefined') + ",  isChannelReady: " + (isChannelReady));
   if (!isStarted && typeof localStream != 'undefined' && isChannelReady) {
     createPeerConnection();
     pc.addStream(localStream);
+    console.log("add local stream");
     isStarted = true;
-    console.log('isInitiator', isInitiator);
     if (isInitiator) {
       doCall();
     }
@@ -140,6 +139,7 @@ window.onbeforeunload = function(e){
 function createPeerConnection() {
   try {
     pc = new RTCPeerConnection(null);
+    //  onicecandidate returns locally generated ICE candidates to be passed to peers
     pc.onicecandidate = handleIceCandidate;
     pc.onaddstream = handleRemoteStreamAdded;
     pc.onremovestream = handleRemoteStreamRemoved;
@@ -151,6 +151,7 @@ function createPeerConnection() {
   }
 }
 
+// called when RTCPeerConnection gets an ice candidate
 function handleIceCandidate(event) {
   console.log('handleIceCandidate event: ', event);
   if (event.candidate) {
@@ -175,7 +176,6 @@ function handleCreateOfferError(event){
 }
 
 function doCall() {
-  console.log('Sending offer to peer');
   pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
 }
 
@@ -188,10 +188,11 @@ function setLocalAndSendMessage(sessionDescription) {
   // Set Opus as the preferred codec in SDP if Opus is present.
   sessionDescription.sdp = preferOpus(sessionDescription.sdp);
   pc.setLocalDescription(sessionDescription);
-  console.log('setLocalAndSendMessage sending message' , sessionDescription);
+  console.log('sending ' + sessionDescription.type, sessionDescription);
   sendMessage(sessionDescription);
 }
 
+//
 function requestTurn(turn_url) {
   var turnExists = false;
   for (var i in pc_config.iceServers) {
@@ -255,6 +256,7 @@ function stop() {
 
 // Set Opus as the default audio codec if it's present.
 function preferOpus(sdp) {
+  //console.log("preferOpus:\n" + sdp);
   var sdpLines = sdp.split('\r\n');
   var mLineIndex;
   // Search for m line.
@@ -309,6 +311,7 @@ function setDefaultCodec(mLine, payload) {
 
 // Strip CN from sdp before CN constraints is ready.
 function removeCN(sdpLines, mLineIndex) {
+
   var mLineElements = sdpLines[mLineIndex].split(' ');
   // Scan from end for the convenience of removing an item.
   for (var i = sdpLines.length-1; i >= 0; i--) {
