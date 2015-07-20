@@ -3,17 +3,15 @@
 	<head>
 	</head>
 
-	<body>
+  	<div id='textareas'>
 		<textarea id="dataChannelSend" disabled placeholder="Press Start, enter some text, then press Send."></textarea>
 		<textarea id="dataChannelReceive" disabled></textarea>
+	</div>
 
-		<div id="buttons">
-			<button id="startButton">Start</button>
-			<button id="sendButton">Send</button>
-			<button id="closeButton">Stop</button>
-		</div>
-		<script src='socket.io/lib/socket.io.js'></script>
-		<script src='js/lib/adapter.js'></script>
-		<script src="js/main.js"></script>
+  	<button id="sendButton" disabled>Send</button>
+
+	<script src='socket.io/lib/socket.io.js'></script>
+	<script src='js/lib/adapter.js'></script>
+	<script src="js/main.js"></script>
 	</body>
 </html>
