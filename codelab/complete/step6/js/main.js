@@ -1,5 +1,28 @@
 'use strict';
+/*
+  questions:
+    - where is code for webkitRTCPeerConnection or moz ??
+    - where does the ice creation and stun/turn request happen ??
 
+  sdp = agreement on what standards, codecs, resolution ... to use in communication
+  ice = how to traverse the network to communicate with peer
+  
+  chronology:
+    Initiator                         2nd peer
+      create room
+      setup local stream
+                                        join room
+                                        setup local stream
+      create peerConnection             create peerConnection
+      send ice candidates               send ice candidates
+      get remote ice candidates         get remote ice candidates
+      set local sdp
+      send sdp offer
+                                        set remote sdp
+                                        set local sdp
+                                        send answer
+      set remote sdp
+*/
 var isChannelReady;
 var isInitiator = false;
 var isStarted = false;
@@ -7,6 +30,7 @@ var localStream;
 var pc;
 var remoteStream;
 var turnReady;
+var offerOrAnswer = "";
 
 var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -27,13 +51,10 @@ if (room === '') {
   //
 }
 
-console.log(io);
-console.log("sldfjkdlskfjsd");
 var socket = io.connect();
 
 // request to join a room
 if (room !== '') {
-  console.log('Create or join room', room);
   socket.emit('create or join', room);        // ?? how does it know what to connect to ??
 }
 
@@ -47,46 +68,61 @@ socket.on('full', function (room){    // more than 2 people in room
 });
 socket.on('join', function (room){    // a 2nd person joined the room you created
   console.log('Another peer made a request to join room ' + room);
-  console.log('This peer is the initiator of room ' + room + '!');
   isChannelReady = true;
 });
 socket.on('joined', function (room){  // you are 2nd person in room
   console.log('This peer has joined room ' + room);
   isChannelReady = true;
 });
-socket.on('log', function (array){
-  console.log.apply(console, array);
-});
+// socket.on('log', function (array){
+//   console.log.apply(console, array);
+// });
 
 ////////////////////////////////////////////////
 
+// broadcast message to room members
 function sendMessage(message){
 	console.log('Client sending message: ', message);
-  // if (typeof message === 'object') {
-  //   message = JSON.stringify(message);
-  // }
+  if (message.type == "candidate") {
+    message.from = isInitiator ? "1" : "2";
+  }
   socket.emit('message', message);
 }
 
 socket.on('message', function (message){
-  console.log('Client received message:', message);
+  //console.log('Client received message:', message);
+  // message received wwhen either client initializes media
+  // so even the last person to join will setup connection 
   if (message === 'got user media') {
-  	maybeStart();
-  } else if (message.type === 'offer') {
+  	attemptConnection();
+  } 
+  //received an sdp offer from other client
+  else if (message.type === 'offer') {
     if (!isInitiator && !isStarted) {
-      maybeStart();
+      attemptConnection();
     }
-    pc.setRemoteDescription(new RTCSessionDescription(message));
-    doAnswer();
-  } else if (message.type === 'answer' && isStarted) {
-    pc.setRemoteDescription(new RTCSessionDescription(message));
-  } else if (message.type === 'candidate' && isStarted) {
+    var sessDesc = new RTCSessionDescription(message);
+    pc.setRemoteDescription(sessDesc);
+    console.log("(OFFER) setting remote description", sessDesc);
+    answer();
+  } 
+  // 
+  else if (message.type === 'answer' && isStarted) {
+    var sessDesc = new RTCSessionDescription(message);
+    pc.setRemoteDescription(sessDesc);
+    console.log("(ANSWER) setting remote description", sessDesc);
+  } 
+  // if being sent a candidate add it to peerConnection
+  // there is nothing preventing an instance from receiving its own candidate ??
+  else if (message.type === 'candidate' && isStarted) {
     var candidate = new RTCIceCandidate({
       sdpMLineIndex: message.label,
       candidate: message.candidate
     });
     pc.addIceCandidate(candidate);
-  } else if (message === 'bye' && isStarted) {
+    console.log("adding candidate from " + message.from + ":  ", candidate)
+  } 
+  else if (message === 'bye' && isStarted) {
     handleRemoteHangup();
   }
 });
@@ -97,12 +133,13 @@ var localVideo = document.querySelector('#localVideo');
 var remoteVideo = document.querySelector('#remoteVideo');
 
 function handleUserMedia(stream) {
-  console.log('Adding local stream.');
+  console.log('setting up local stream');
   localVideo.src = window.URL.createObjectURL(stream);
   localStream = stream;
+  // if the 2nd person in room, alert creator 
   sendMessage('got user media');
   if (isInitiator) {
-    maybeStart();
+    attemptConnection();
   }
 }
 
@@ -110,23 +147,31 @@ function handleUserMediaError(error){
   console.log('getUserMedia error: ', error);
 }
 
-var constraints = {video: true};
+var constraints = {video: true, audio: true};
 getUserMedia(constraints, handleUserMedia, handleUserMediaError);
-
-console.log('Getting user media with constraints', constraints);
 
 if (location.hostname != "localhost") {
   requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 }
 
-function maybeStart() {
+/*
+  before creating peer connection must: 
+    1) (!isStarted) not have created one before
+    2) (ocalStream != 'undefined') localStream has been initialized by getUserMedia()
+    3) (isChannelReady) two people are in stream 
+*/
+function attemptConnection() {
+  console.log("attemptConnection: " + (!isStarted && typeof localStream != 'undefined' && isChannelReady)
+              + ",   !isStarted: " + (!isStarted) 
+              + ",    localStream defined: " + (typeof localStream != 'undefined') 
+              + ",    isChannelReady: " + (isChannelReady));
   if (!isStarted && typeof localStream != 'undefined' && isChannelReady) {
     createPeerConnection();
     pc.addStream(localStream);
     isStarted = true;
-    console.log('isInitiator', isInitiator);
+    // first person in channel is initiator
     if (isInitiator) {
-      doCall();
+      call();
     }
   }
 }
@@ -137,6 +182,7 @@ window.onbeforeunload = function(e){
 
 /////////////////////////////////////////////////////////
 
+// the contstructor prototype must request ICE candidate and call oncandidate func
 function createPeerConnection() {
   try {
     pc = new RTCPeerConnection(null);
@@ -151,8 +197,9 @@ function createPeerConnection() {
   }
 }
 
+// send results from stun servers (ipv4/ipv6, UDP random addresses)
 function handleIceCandidate(event) {
-  console.log('handleIceCandidate event: ', event);
+  // console.log('handleIceCandidate event: ', event);
   if (event.candidate) {
     sendMessage({
       type: 'candidate',
@@ -164,31 +211,36 @@ function handleIceCandidate(event) {
   }
 }
 
+// called when a remote connection has added a stream to peerConnection
 function handleRemoteStreamAdded(event) {
-  console.log('Remote stream added.');
+  console.log('Remote stream added');
   remoteVideo.src = window.URL.createObjectURL(event.stream);
   remoteStream = event.stream;
+}
+
+// called when a remote connection has remove a stream to peerConnection
+function handleRemoteStreamRemoved(event) {
+  console.log('Remote stream removed. Event: ', event);
 }
 
 function handleCreateOfferError(event){
   console.log('createOffer() error: ', e);
 }
 
-function doCall() {
-  console.log('Sending offer to peer');
+function call() {
+  offerOrAnswer = "offer";
   pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
 }
 
-function doAnswer() {
-  console.log('Sending answer to peer.');
+function answer() {
+  offerOrAnswer = "answer";
   pc.createAnswer(setLocalAndSendMessage, null, sdpConstraints);
 }
 
 function setLocalAndSendMessage(sessionDescription) {
-  // Set Opus as the preferred codec in SDP if Opus is present.
   sessionDescription.sdp = preferOpus(sessionDescription.sdp);
   pc.setLocalDescription(sessionDescription);
-  console.log('setLocalAndSendMessage sending message' , sessionDescription);
+  console.log('setLocal and sending ' + offerOrAnswer , sessionDescription);
   sendMessage(sessionDescription);
 }
 
@@ -219,16 +271,6 @@ function requestTurn(turn_url) {
     xhr.open('GET', turn_url, true);
     xhr.send();
   }
-}
-
-function handleRemoteStreamAdded(event) {
-  console.log('Remote stream added.');
-  remoteVideo.src = window.URL.createObjectURL(event.stream);
-  remoteStream = event.stream;
-}
-
-function handleRemoteStreamRemoved(event) {
-  console.log('Remote stream removed. Event: ', event);
 }
 
 function hangup() {

@@ -18,9 +18,11 @@ io.sockets.on('connection', function (socket){
 	    socket.emit('log', array);
 	}
 
+
+	// rebroadcast messages across room members
 	socket.on('message', function (message) {
 		log('Got message: ', message);
-    // For a real app, should be room only (not broadcast)
+    // ***For a real app, should be room only (not broadcast)
 		socket.broadcast.emit('message', message);
 	});
 
@@ -28,12 +30,12 @@ io.sockets.on('connection', function (socket){
 		var numClients = io.sockets.clients(room).length;
 
 		log('Room ' + room + ' has ' + numClients + ' client(s)');
-		log('Request to create or join room', room);
 
 		if (numClients == 0){
 			socket.join(room);
 			socket.emit('created', room);
 		} else if (numClients == 1) {
+			// send this message to the other members currently in room
 			io.sockets.in(room).emit('join', room);
 			socket.join(room);
 			socket.emit('joined', room);
