@@ -101,8 +101,6 @@ socket.on('message', function (message){
 
 ////////////////////////////////////////////////////
 
-var localVideo = document.querySelector('#localVideo');
-var remoteVideo = document.querySelector('#remoteVideo');
 
 function handleUserMedia(stream) {
   localStream = stream;
@@ -118,19 +116,21 @@ function handleUserMediaError(error){
   console.log('getUserMedia error: ', error);
 }
 
-var constraints = {video: true};
+var constraints = null;//{video: true};
 
-getUserMedia(constraints, handleUserMedia, handleUserMediaError);
-console.log('Getting user media with constraints', constraints);
+  sendMessage('got user media');
+
+//getUserMedia(constraints, handleUserMedia, handleUserMediaError);
+//console.log('Getting user media with constraints', constraints);
 
 if (location.hostname != "localhost") {
   requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 }
 
 function maybeStart() {
-  if (!isStarted && localStream && isChannelReady) {
+  if (!isStarted && isChannelReady) {
     createPeerConnection();
-    pc.addStream(localStream);
+    //pc.addStream(localStream);
     isStarted = true;
     if (isInitiator) {
       doCall();
@@ -146,7 +146,7 @@ window.onbeforeunload = function(e){
 
 function createPeerConnection() {
   try {
-    pc = new RTCPeerConnection(pc_config, pc_constraints);
+    pc = new RTCPeerConnection(null);
     pc.onicecandidate = handleIceCandidate;
     console.log('Created RTCPeerConnnection with:\n' +
       '  config: \'' + JSON.stringify(pc_config) + '\';\n' +
@@ -255,19 +255,19 @@ function handleIceCandidate(event) {
 }
 
 function doCall() {
-  var constraints = {'optional': [], 'mandatory': {'MozDontOfferDataChannel': true}};
-  // temporary measure to remove Moz* constraints in Chrome
-  if (webrtcDetectedBrowser === 'chrome') {
-    for (var prop in constraints.mandatory) {
-      if (prop.indexOf('Moz') !== -1) {
-        delete constraints.mandatory[prop];
-      }
-     }
-   }
-  constraints = mergeConstraints(constraints, sdpConstraints);
-  console.log('Sending offer to peer, with constraints: \n' +
-    '  \'' + JSON.stringify(constraints) + '\'.');
-  pc.createOffer(setLocalAndSendMessage, null, constraints);
+  // var constraints = {'optional': [], 'mandatory': {'MozDontOfferDataChannel': true}};
+  // // temporary measure to remove Moz* constraints in Chrome
+  // if (webrtcDetectedBrowser === 'chrome') {
+  //   for (var prop in constraints.mandatory) {
+  //     if (prop.indexOf('Moz') !== -1) {
+  //       delete constraints.mandatory[prop];
+  //     }
+  //    }
+  //  }
+  // constraints = mergeConstraints(constraints, sdpConstraints);
+  // console.log('Sending offer to peer, with constraints: \n' +
+  //   '  \'' + JSON.stringify(constraints) + '\'.');
+  pc.createOffer(setLocalAndSendMessage, null);//, constraints);
 }
 
 function doAnswer() {
@@ -286,7 +286,7 @@ function mergeConstraints(cons1, cons2) {
 
 function setLocalAndSendMessage(sessionDescription) {
   // Set Opus as the preferred codec in SDP if Opus is present.
-  sessionDescription.sdp = preferOpus(sessionDescription.sdp);
+  //sessionDescription.sdp = preferOpus(sessionDescription.sdp);
   pc.setLocalDescription(sessionDescription);
   sendMessage(sessionDescription);
 }
