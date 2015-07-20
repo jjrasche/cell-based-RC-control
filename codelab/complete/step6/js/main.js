@@ -3,6 +3,7 @@
   questions:
     - where is code for webkitRTCPeerConnection or moz ??
     - where does the ice creation and stun/turn request happen ??
+    - how does  io.connect() know what server to connect its websocket to ??
 
   sdp = agreement on what standards, codecs, resolution ... to use in communication
   ice = how to traverse the network to communicate with peer
@@ -51,10 +52,12 @@ if (room === '') {
   //
 }
 
+
 var socket = io.connect();
 
 // request to join a room
 if (room !== '') {
+
   socket.emit('create or join', room);        // ?? how does it know what to connect to ??
 }
 
@@ -71,12 +74,12 @@ socket.on('join', function (room){    // a 2nd person joined the room you create
   isChannelReady = true;
 });
 socket.on('joined', function (room){  // you are 2nd person in room
-  console.log('This peer has joined room ' + room);
+  console.log('joined room ' + room);
   isChannelReady = true;
 });
-// socket.on('log', function (array){
-//   console.log.apply(console, array);
-// });
+socket.on('log', function (array){
+  //console.log.apply(console, array);
+});
 
 ////////////////////////////////////////////////
 
@@ -129,9 +132,7 @@ socket.on('message', function (message){
 
 ////////////////////////////////////////////////////
 
-var localVideo = document.querySelector('#localVideo');
-var remoteVideo = document.querySelector('#remoteVideo');
-
+// initialize local objects
 function handleUserMedia(stream) {
   console.log('setting up local stream');
   localVideo.src = window.URL.createObjectURL(stream);
@@ -149,7 +150,6 @@ function handleUserMediaError(error){
 
 var constraints = {video: true, audio: true};
 getUserMedia(constraints, handleUserMedia, handleUserMediaError);
-
 if (location.hostname != "localhost") {
   requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 }
@@ -168,6 +168,7 @@ function attemptConnection() {
   if (!isStarted && typeof localStream != 'undefined' && isChannelReady) {
     createPeerConnection();
     pc.addStream(localStream);
+    console.log("add local stream");
     isStarted = true;
     // first person in channel is initiator
     if (isInitiator) {
@@ -186,6 +187,7 @@ window.onbeforeunload = function(e){
 function createPeerConnection() {
   try {
     pc = new RTCPeerConnection(null);
+    //  onicecandidate returns locally generated ICE candidates to be passed to peers
     pc.onicecandidate = handleIceCandidate;
     pc.onaddstream = handleRemoteStreamAdded;
     pc.onremovestream = handleRemoteStreamRemoved;
@@ -244,6 +246,7 @@ function setLocalAndSendMessage(sessionDescription) {
   sendMessage(sessionDescription);
 }
 
+//
 function requestTurn(turn_url) {
   var turnExists = false;
   for (var i in pc_config.iceServers) {
@@ -297,6 +300,7 @@ function stop() {
 
 // Set Opus as the default audio codec if it's present.
 function preferOpus(sdp) {
+  //console.log("preferOpus:\n" + sdp);
   var sdpLines = sdp.split('\r\n');
   var mLineIndex;
   // Search for m line.
@@ -351,6 +355,7 @@ function setDefaultCodec(mLine, payload) {
 
 // Strip CN from sdp before CN constraints is ready.
 function removeCN(sdpLines, mLineIndex) {
+
   var mLineElements = sdpLines[mLineIndex].split(' ');
   // Scan from end for the convenience of removing an item.
   for (var i = sdpLines.length-1; i >= 0; i--) {
