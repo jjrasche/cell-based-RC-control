@@ -8,28 +8,36 @@ var joystick = function(canvas, baseX, baseY){
   var baseStickPosY = 250;
   var stickPosY = 250;
   var effRadius = 5
+  var pressed = 0;
 
-  return{
-    press: function(x,y){
-      pressed = 1;
+  function press(x,y) {
+    pressed = 1;
+    stickPosX = x;
+    stickPosY = y;
+    this.draw();
+  };
+  function unpress(x,y) {
+    pressed = 0;
+    stickPosX = baseStickPosX;
+    stickPosY = baseStickPosY;
+    this.draw();
+  };
+  function updatePosition(x,y){
+    if(pressed == 1){
       stickPosX = x;
       stickPosY = y;
       this.draw();
-    },
-    unpress: function(){
-      pressed = 0;
-      stickPosX = baseStickPosX;
-      stickPosY = baseStickPosY;
-      this.draw();
-    },
-    updatePosition: function(x,y){
-      console.log("updatePosition:  (" + x + ", " + y + ")");
-      if(pressed == 1){
-        stickPosX = x;
-        stickPosY = y;
-        this.draw();
-      }
-    },
+    }
+  };
+
+  return{
+    effect: {mousedown:  press,
+             touchstart: press,
+             mousedown:  unpress,
+             touchend:   unpress,
+             mousemove:  updatePosition,              
+             touchmove:  updatePosition
+           },
     effectedByGesture: function(x,y) {
       return distance(stickPosX, x, stickPosY, y) < effRadius;
     },
@@ -65,78 +73,3 @@ var joystick = function(canvas, baseX, baseY){
     }
   }
 };
-
-$(document).ready(function () {
-  console.log()
-  //stick.draw(document.getElementById("canvasSignature").getContext("2d"));
-  initialize();
-});
-
-function initialize() {
-  // get references to the canvas element as well as the 2D drawing context
-  stick.draw();
-
-  var actions = {
-    touchstart: function (coors) {
-      canvas.addEventListener('touchmove', move, false);
-      stick.press(coors.x,coors.y);
-    },
-    touchmove: function (coors) {
-        stick.updatePosition(coors.x,coors.y);
-    },
-    touchend: function (coors) {
-      stick.unpress();
-      canvas.removeEventListener('touchmove', move, false);
-    },
-
-    mousedown: function (coors) {
-      canvas.addEventListener('mousemove', move, false);
-      stick.press(coors.x,coors.y);
-      coors.action = "down";
-      transmit(coors);
-    },
-    mousemove: function (coors) {
-      stick.updatePosition(coors.x,coors.y);
-      coors.action = "move";
-      transmit(coors);
-    },
-    mouseup: function (coors) {
-      stick.unpress();
-      canvas.removeEventListener('mousemove', move, false);
-      coors.action = "up";
-      transmit(coors);
-    }
-  };
-
-  function transmit(obj) {
-    commOut.innerHTML = JSON.stringify(obj);
-    sendChannel.send(JSON.stringify(obj));
-
-  }
-
-  // create a function to pass touch events and coordinates to drawer
-  function move(event) {
-    var coors = {};
-    if (event.targetTouches != null) {
-      coors = {
-        x: event.targetTouches[0].pageX - canvas.offsetLeft,
-        y: event.targetTouches[0].pageY - canvas.offsetTop
-      };
-    }
-    else {
-      coors = {
-        x: event.pageX - canvas.offsetLeft,
-        y: event.pageY - canvas.offsetTop
-      };
-    }
-    actions[event.type](coors);
-  }
-
-  canvas.addEventListener('touchstart', move, false);
-  canvas.addEventListener('touchend', move, false);
-  canvas.addEventListener('mousedown', move, false);
-  canvas.addEventListener('mouseup', move, false);
-
-  // prevent elastic scrolling
-  canvas.addEventListener('touchmove',function (event) {event.preventDefault();},false); 
-}
