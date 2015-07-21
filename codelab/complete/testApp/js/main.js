@@ -1,4 +1,145 @@
 'use strict';
+
+
+/////////////// controller code ////////////////
+
+var joystick = function(canvas){
+  var context = canvas.getContext("2d");
+  var baseStickPosX = 250;
+  var stickPosX = 250;
+  var baseStickPosY = 250;
+  var stickPosY = 250;
+
+  return{
+    press: function(x,y){
+      pressed = 1;
+      stickPosX = x;
+      stickPosY = y;
+      this.draw();
+    },
+    unpress: function(){
+      pressed = 0;
+      stickPosX = baseStickPosX;
+      stickPosY = baseStickPosY;
+      this.draw();
+    },
+    updatePosition: function(x,y){
+      console.log("updatePosition:  (" + x + ", " + y + ")");
+      if(pressed == 1){
+        stickPosX = x;
+        stickPosY = y;
+        this.draw();
+      }
+    },
+    draw: function(){
+      context.clearRect(0,0,canvas.width,canvas.height); 
+      //base of joystick
+      var grd = context.createRadialGradient(baseStickPosX-25, baseStickPosY-25, 25, baseStickPosX+25, baseStickPosY+25, 25);
+      grd.addColorStop(0, "#8ED6FF"); // light blue
+      grd.addColorStop(1, "#004CB3"); // dark blue    
+
+      context.fillStyle = grd;        
+      context.beginPath();
+      //draw arc: arc(x, y, radius, startAngle, endAngle, anticlockwise)
+      context.arc(baseStickPosX, baseStickPosY, 25, Math.PI*2, 0, true);
+      //end drawing
+      context.closePath()
+      //fill it so you could see it
+      context.fill();
+
+      //actual joystick
+      //console.log(stickPosX + " " + stickPosY);
+      var grd2 = context.createRadialGradient(stickPosX-15, stickPosY-15, 15, stickPosX+15, stickPosY+15, 15);        
+      grd2.addColorStop(0, "#FF9999"); // light red
+      grd2.addColorStop(1, "#990000"); // dark red        
+      context.fillStyle = grd2;       
+      context.beginPath();
+      //draw arc: arc(x, y, radius, startAngle, endAngle, anticlockwise)
+      context.arc(stickPosX, stickPosY, 15, Math.PI*2, 0, true);
+      //end drawing
+      context.closePath()
+      //fill it so you could see it
+      context.fill();
+    }
+  }
+};
+
+$(document).ready(function () {
+  console.log()
+  //stick.draw(document.getElementById("canvasSignature").getContext("2d"));
+  initialize();
+});
+
+function initialize() {
+  // get references to the canvas element as well as the 2D drawing context
+  stick.draw();
+
+  var actions = {
+    touchstart: function (coors) {
+      canvas.addEventListener('touchmove', move, false);
+      stick.press(coors.x,coors.y);
+    },
+    touchmove: function (coors) {
+        stick.updatePosition(coors.x,coors.y);
+    },
+    touchend: function (coors) {
+      stick.unpress();
+      canvas.removeEventListener('touchmove', move, false);
+    },
+
+    mousedown: function (coors) {
+      canvas.addEventListener('mousemove', move, false);
+      stick.press(coors.x,coors.y);
+      coors.action = "down";
+      transmit(coors);
+    },
+    mousemove: function (coors) {
+      stick.updatePosition(coors.x,coors.y);
+      coors.action = "move";
+      transmit(coors);
+    },
+    mouseup: function (coors) {
+      stick.unpress();
+      canvas.removeEventListener('mousemove', move, false);
+      coors.action = "up";
+      transmit(coors);
+    }
+  };
+
+  function transmit(obj) {
+    commOut.innerHTML = JSON.stringify(obj);
+    sendChannel.send(JSON.stringify(obj));
+
+  }
+
+  // create a function to pass touch events and coordinates to drawer
+  function move(event) {
+    var coors = {};
+    if (event.targetTouches != null) {
+      coors = {
+        x: event.targetTouches[0].pageX - canvas.offsetLeft,
+        y: event.targetTouches[0].pageY - canvas.offsetTop
+      };
+    }
+    else {
+      coors = {
+        x: event.pageX - canvas.offsetLeft,
+        y: event.pageY - canvas.offsetTop
+      };
+    }
+    actions[event.type](coors);
+  }
+
+  canvas.addEventListener('touchstart', move, false);
+  canvas.addEventListener('touchend', move, false);
+  canvas.addEventListener('mousedown', move, false);
+  canvas.addEventListener('mouseup', move, false);
+
+  // prevent elastic scrolling
+  canvas.addEventListener('touchmove',function (event) {event.preventDefault();},false); 
+}
+
+
 /*
   questions:
     - where is code for webkitRTCPeerConnection or moz ??
@@ -32,11 +173,16 @@ var pc;
 var remoteStream;
 var turnReady;
 var offerOrAnswer = "";
+var pressed = 0;
 
 var sendChannel;
-var sendButton = document.getElementById("sendButton");
-var sendTextarea = document.getElementById("dataChannelSend");
-var receiveTextarea = document.getElementById("dataChannelReceive");
+var commOut = document.getElementById("commandOut");
+var commIn = document.getElementById("commandIn");
+var canvas = document.getElementById("canvasSignature");
+
+console.log("out: ", commOut);
+console.log("in: ", commIn);
+var stick = joystick(canvas); 
 
 var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -139,11 +285,10 @@ socket.on('message', function (message){
 
 // initialize local objects
 function handleUserMedia(stream) {
-  // console.log('setting up local stream');
-  // localVideo.src = window.URL.createObjectURL(stream);
-  // localStream = stream;
-  // if the 2nd person in room, alert creator 
-  sendMessage('got user media');
+  console.log('setting up local stream');
+  localVideo.src = window.URL.createObjectURL(stream);
+  localStream = stream;
+  //if the 2nd person in room, alert creator 
   if (isInitiator) {
     attemptConnection();
   }
@@ -154,7 +299,8 @@ function handleUserMediaError(error){
 }
 
 var constraints = {video: true, audio: true};
-getUserMedia(constraints, handleUserMedia, handleUserMediaError);
+sendMessage('got user media');
+//getUserMedia(constraints, handleUserMedia, handleUserMediaError);
 if (location.hostname != "localhost") {
   requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 }
@@ -190,7 +336,7 @@ window.onbeforeunload = function(e){
 // the contstructor prototype must request ICE candidate and call oncandidate func
 function createPeerConnection() {
   try {
-    pc = new RTCPeerConnection(null);
+    /*XXX*/pc = new RTCPeerConnection(null);
     //  onicecandidate returns locally generated ICE candidates to be passed to peers
     pc.onicecandidate = handleIceCandidate;
     pc.onaddstream = handleRemoteStreamAdded;
@@ -213,8 +359,8 @@ function createPeerConnection() {
             'You need Chrome M25 or later with RtpDataChannel enabled');
       trace('createDataChannel() failed with exception: ' + e.message);
     }
-    sendChannel.onopen = handleSendChannelStateChange;
-    sendChannel.onclose = handleSendChannelStateChange;
+    sendChannel.onopen = null;
+    sendChannel.onclose = null;
   } else {
     pc.ondatachannel = gotReceiveChannel;
   }
@@ -244,13 +390,22 @@ function gotReceiveChannel(event) {
   trace('Receive Channel Callback');
   sendChannel = event.channel;
   sendChannel.onmessage = handleMessage;
-  sendChannel.onopen = handleReceiveChannelStateChange;
-  sendChannel.onclose = handleReceiveChannelStateChange;
+  sendChannel.onopen = null;
+  sendChannel.onclose = null;
 }
 
 function handleMessage(event) {
-  trace('Received message: ' + event.data);
-  receiveTextarea.value = event.data;
+  var obj = JSON.parse(event.data);
+  commIn.innerHTML = "(" + obj.x + ", " + obj.y + ")";
+  console.log('Received message: ', obj);
+  if (obj.action == "up")
+    pressed = 0;
+  else if (obj.action == "down")
+    pressed = 1;
+  else if (obj.action == "move")
+    stick.updatePosition(obj.x,obj.y);
+  else 
+    throw "invalid action";
 }
 
 function handleSendChannelStateChange() {
@@ -439,4 +594,3 @@ function removeCN(sdpLines, mLineIndex) {
   sdpLines[mLineIndex] = mLineElements.join(' ');
   return sdpLines;
 }
-

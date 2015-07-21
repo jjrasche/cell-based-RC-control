@@ -71,6 +71,8 @@
 		});
 
 		function initialize() {
+			var box = document.getElementById("commandOut");
+			console.log(box);
 			// get references to the canvas element as well as the 2D drawing context
 			var canvas = document.getElementById("canvasSignature");
 			var stick = joystick(canvas);
@@ -92,15 +94,22 @@
 				mousedown: function (coors) {
 					canvas.addEventListener('mousemove', move, false);
 					stick.press(coors.x,coors.y);
+					transmit(coors);
 				},
 				mousemove: function (coors) {
 				    stick.updatePosition(coors.x,coors.y);
+					transmit(coors);
 				},
 				mouseup: function (coors) {
 					stick.unpress();
 					canvas.removeEventListener('mousemove', move, false);
+					transmit(coors);
 				}
 			};
+
+			function transmit(obj) {
+				box.innerHTML = JSON.stringify(obj);
+			}
 
 			// create a function to pass touch events and coordinates to drawer
 			function move(event) {
@@ -221,6 +230,9 @@
  
    <div id="canvasDiv">
       <canvas id="canvasSignature" width="500px" height="500px" style="border:2px solid #000000;"></canvas>
+   </div>
+   <div>
+   	<div id="commandOut"></div>
    </div>
 </body>
 
