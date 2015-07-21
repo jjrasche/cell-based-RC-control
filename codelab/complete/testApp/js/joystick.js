@@ -3,10 +3,10 @@
 // effective region of stick is some radius around current position
 var joystick = function(canvas, baseX, baseY){
   var context = canvas.getContext("2d");
-  var baseStickPosX = 250;
-  var stickPosX = 250;
-  var baseStickPosY = 250;
-  var stickPosY = 250;
+  var baseStickPosX = baseX;
+  var stickPosX = baseX;
+  var baseStickPosY = baseY;
+  var stickPosY = baseY;
   var effRadius = 5
   var pressed = 0;
 
@@ -33,13 +33,13 @@ var joystick = function(canvas, baseX, baseY){
   return{
     effect: {mousedown:  press,
              touchstart: press,
-             mousedown:  unpress,
+             mouseup:  unpress,
              touchend:   unpress,
              mousemove:  updatePosition,              
              touchmove:  updatePosition
            },
-    effectedByGesture: function(x,y) {
-      return distance(stickPosX, x, stickPosY, y) < effRadius;
+    effectedByGesture: function(coors) {
+      return distance(stickPosX, coors.x, stickPosY, coors.y) < effRadius;
     },
     draw: function(){
       context.clearRect(0,0,canvas.width,canvas.height); 
@@ -64,6 +64,14 @@ var joystick = function(canvas, baseX, baseY){
       grd2.addColorStop(1, "#990000"); // dark red        
       context.fillStyle = grd2;       
       context.beginPath();
+
+      // shoe effected area
+      var effArea = context.createRadialGradient(stickPosX-effRadius, stickPosY-effRadius, effRadius, stickPosX+effRadius, stickPosY+effRadius, effRadius);        
+      effArea.addColorStop(0, "#FFFFFF"); // light red
+      effArea.addColorStop(1, "#000000"); // dark red        
+      context.fillStyle = effArea;       
+      context.beginPath();      
+
       //draw arc: arc(x, y, radius, startAngle, endAngle, anticlockwise)
       context.arc(stickPosX, stickPosY, 15, Math.PI*2, 0, true);
       //end drawing

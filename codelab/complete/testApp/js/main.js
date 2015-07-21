@@ -38,11 +38,9 @@ var pressed = 0;
 var sendChannel;
 var commOut = document.getElementById("commandOut");
 var commIn = document.getElementById("commandIn");
-var canvas = document.getElementById("canvasSignature");
 
 console.log("out: ", commOut);
 console.log("in: ", commIn);
-var stick = joystick(canvas); 
 
 var pc_config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
@@ -192,7 +190,9 @@ window.onbeforeunload = function(e){
 }
 
 /////////////////////////////////////////////////////////
-
+$(document).ready(function () {
+  initialize(sendChannel);
+});
 // the contstructor prototype must request ICE candidate and call oncandidate func
 function createPeerConnection() {
   try {
@@ -210,9 +210,8 @@ function createPeerConnection() {
 
   if (isInitiator) {
     try {
-      sendChannel = pc.createDataChannel("sendDataChannel",
-        {reliable: false});
-      sendChannel.onmessage = handleMessage;
+      sendChannel = pc.createDataChannel("sendDataChannel", {reliable: false});
+      initialize(sendChannel);
       console.log('Created send data channel');
     } catch (e) {
       alert('Failed to create data channel. ' +
@@ -254,19 +253,19 @@ function gotReceiveChannel(event) {
   sendChannel.onclose = null;
 }
 
-function handleMessage(event) {
-  var obj = JSON.parse(event.data);
-  commIn.innerHTML = "(" + obj.x + ", " + obj.y + ")";
-  console.log('Received message: ', obj);
-  if (obj.action == "up")
-    pressed = 0;
-  else if (obj.action == "down")
-    pressed = 1;
-  else if (obj.action == "move")
-    stick.updatePosition(obj.x,obj.y);
-  else 
-    throw "invalid action";
-}
+// function handleMessage(event) {
+//   var obj = JSON.parse(event.data);
+//   commIn.innerHTML = "(" + obj.x + ", " + obj.y + ")";
+//   console.log('Received message: ', obj);
+//   if (obj.action == "up")
+//     pressed = 0;
+//   else if (obj.action == "down")
+//     pressed = 1;
+//   else if (obj.action == "move")
+//     stick.updatePosition(obj.x,obj.y);
+//   else 
+//     throw "invalid action";
+// }
 
 function handleSendChannelStateChange() {
   var readyState = sendChannel.readyState;
