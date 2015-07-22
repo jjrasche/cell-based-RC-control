@@ -39,6 +39,7 @@ function initialize(dataChannel) {
     },
     mouseup: function (coors, obj, event) {
       obj.effect[event](coors);
+      console.log("lasjfljdflskjdf");
       transmit(coors, event);
       canvas.removeEventListener('mousemove', move, false);
     }
@@ -94,10 +95,10 @@ function initialize(dataChannel) {
       };
     }
 
-    console.log(event.type);
     var obj = getEffectedObject(coors);
+    console.log(event.type, obj);
     if (obj != null) {
-      console.log(obj);
+      //console.log(obj);
 	    actions[event.type](coors, obj, event.type);
 	    drawController();
 	   }

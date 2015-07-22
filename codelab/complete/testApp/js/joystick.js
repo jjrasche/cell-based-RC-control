@@ -3,31 +3,26 @@
 // effective region of stick is some radius around current position
 var joystick = function(canvas, baseX, baseY){
   var context = canvas.getContext("2d");
-  var baseStickPosX = baseX;
-  var stickPosX = baseX;
-  var baseStickPosY = baseY;
-  var stickPosY = baseY;
+  var baseStickCoors = {x: baseX, y: baseY};  
+  var currStickCoors = {x: baseX, y: baseY};
   var effRadius = 10
   var pressed = 0;
 
-  function press(x,y) {
-    console.log("press: " + x + "  " + y);
-    pressed = 1;
-    stickPosX = x;
-    stickPosY = y;
+  function press(coors) {
+    console.log("press: " + coors.x + "  " + coors.y);
+    console.log(this);
+    this.pressed = 1;
+    currStickCoors = coors;
   };
-  function unpress(x,y) {
-    console.log("unpress: " + x + "  " + y);
-    pressed = 0;
-    stickPosX = baseStickPosX;
-    stickPosY = baseStickPosY;
+  function unpress(coors) {
+    console.log("unpress: " + coors.x + "  " + coors.y);
+    this.pressed = 0;
+    currStickCoors = baseStickCoors;
   };
-  function updatePosition(x,y){
-    console.log("updatePosition: " + x + "  " + y);
+  function updatePosition(coors){
+    // console.log("updatePosition: " + coors.x + "  " + coors.y);
     if(pressed == 1){
-      stickPosX = x;
-      stickPosY = y;
-      console.log("x: " + stickPosX + ",  y: " + stickPosY);
+      currStickCoors = coors;
     }
   };
 
@@ -41,35 +36,34 @@ var joystick = function(canvas, baseX, baseY){
            },
     effectedByGesture: function(coors) {
       // console.log("coors: ", coors);
-      // console.log("stick: " + stickPosX + ", " + stickPosY);
-      // console.log("dist: ", distance(stickPosX, coors.x, stickPosY, coors.y), coors, stickPosX + ", " + stickPosY, (distance(stickPosX, coors.x, stickPosY, coors.y) < effRadius));
-      return distance(stickPosX, coors.x, stickPosY, coors.y) < effRadius;
+      // console.log("stick: " + currStickCoors.x + ", " + currStickCoors.y);
+      // console.log("dist: ", distance(stickPosX, coors.x, currStickCoors.y, coors.y), coors, currStickCoors.x + ", " + currStickCoors.y, (distance(stickPosX, coors.x, currStickCoors.y, coors.y) < effRadius));
+      return distance(currStickCoors.x, coors.x, currStickCoors.y, coors.y) < effRadius;
     },
     draw: function(){
       context.clearRect(0,0,canvas.width,canvas.height); 
       //base of joystick
-      var grd = context.createRadialGradient(baseStickPosX-25, baseStickPosY-25, 25, baseStickPosX+25, baseStickPosY+25, 25);
+      var grd = context.createRadialGradient(baseStickCoors.x-25, baseStickCoors.y-25, 25, baseStickCoors.x+25, baseStickCoors.y+25, 25);
       grd.addColorStop(0, "#8ED6FF"); // light blue
       grd.addColorStop(1, "#004CB3"); // dark blue    
 
       context.fillStyle = grd;        
       context.beginPath();
       //draw arc: arc(x, y, radius, startAngle, endAngle, anticlockwise)
-      context.arc(baseStickPosX, baseStickPosY, 25, Math.PI*2, 0, true);
+      context.arc(baseStickCoors.x, baseStickCoors.y, 25, Math.PI*2, 0, true);
       //end drawing
       context.closePath()
       //fill it so you could see it
       context.fill();
 
       //actual joystick
-      console.log(stickPosX + " " + stickPosY);
-      var grd2 = context.createRadialGradient(stickPosX-15, stickPosY-15, 15, stickPosX+15, stickPosY+15, 15);        
+      var grd2 = context.createRadialGradient(currStickCoors.x-15, currStickCoors.y-15, 15, currStickCoors.x+15, currStickCoors.y+15, 15);        
       grd2.addColorStop(0, "#FF9999"); // light red
       grd2.addColorStop(1, "#990000"); // dark red        
       context.fillStyle = grd2;       
       context.beginPath();
       //draw arc: arc(x, y, radius, startAngle, endAngle, anticlockwise)
-      context.arc(stickPosX, stickPosY, 15, Math.PI*2, 0, true);
+      context.arc(currStickCoors.x, currStickCoors.y, 15, Math.PI*2, 0, true);
       //end drawing
       context.closePath()
       //fill it so you could see it
@@ -77,12 +71,12 @@ var joystick = function(canvas, baseX, baseY){
 
 
       // shoe effected area
-      var effArea = context.createRadialGradient(stickPosX-effRadius, stickPosY-effRadius, effRadius, stickPosX+effRadius, stickPosY+effRadius, effRadius);        
+      var effArea = context.createRadialGradient(currStickCoors.x-effRadius, currStickCoors.y-effRadius, effRadius, currStickCoors.x+effRadius, currStickCoors.y+effRadius, effRadius);        
       effArea.addColorStop(0, "#FFFFFF"); // light red
       effArea.addColorStop(1, "#000000"); // dark red        
       context.fillStyle = effArea;       
       context.beginPath();      
-      context.arc(stickPosX, stickPosY, effRadius, Math.PI*2, 0, true);
+      context.arc(currStickCoors.x, currStickCoors.y, effRadius, Math.PI*2, 0, true);
       context.closePath()
       context.fill();
     }
