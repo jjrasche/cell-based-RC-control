@@ -4,7 +4,7 @@
 var canvas = document.getElementById("canvasSignature");
 var objects = {};
 objects.rightStick = joystick(canvas, 350, 300);
-objects.leftStick = joystick(canvas, 150, 300);
+//objects.leftStick = joystick(canvas, 150, 300);
 
 function initialize(dataChannel) {
   // get references to the canvas element as well as the 2D drawing context
@@ -15,39 +15,38 @@ function initialize(dataChannel) {
   var actions = {
     touchstart: function (coors, obj, event) {
       canvas.addEventListener('touchmove', move, false);
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
     },
     touchmove: function (coors, obj, event) {
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
     },
     touchend: function (coors, obj, event) {
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
       canvas.removeEventListener('touchmove', move, false);
     },
 
     mousedown: function (coors, obj, event) {
       canvas.addEventListener('mousemove', move, false);
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
     },
     mousemove: function (coors, obj, event) {
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
     },
     mouseup: function (coors, obj, event) {
-      obj[event](coors);
+      obj.effect[event](coors);
       transmit(coors, event);
       canvas.removeEventListener('mousemove', move, false);
     }
   };
 
   function transmit(coors, type) {
-  	msg.type = type;
-  	msg.coors = coors;
-    commOut.innerHTML = JSON.stringify(obj);
+  	var msg = {'type': type, 'coors': coors};
+    commOut.innerHTML = JSON.stringify(msg);
     // dataChannel.send(JSON.stringify(obj));
   }
 
@@ -57,13 +56,15 @@ function initialize(dataChannel) {
   	}
   }
 
+  // return any objects that are newly effected, or currently pressed
   function getEffectedObject(coors) {
-  	var obj = null
+  	var obj = null;
   	for (var key in objects) {
-  		if (objects[key].effectedByGesture(coors)) {
+  		if (objects[key].effectedByGesture(coors) || objects[key].pressed) {
   			if (obj != null) throw "multiple effected objects";
   			obj = objects[key];
-  			console.log(key + " effected by gesture");
+
+  			console.log(key + " effected: " + objects[key].effectedByGesture(coors) + " " + objects[key].pressed + " " + obj);
   		}
   	}
   	return obj;
@@ -92,13 +93,14 @@ function initialize(dataChannel) {
         y: event.pageY - canvas.offsetTop
       };
     }
-    // figure out what object to effect
+
+    console.log(event.type);
     var obj = getEffectedObject(coors);
-    console.log("effected object: ", obj);
     if (obj != null) {
+      console.log(obj);
 	    actions[event.type](coors, obj, event.type);
 	    drawController();
-	}
+	   }
   }
 
 
