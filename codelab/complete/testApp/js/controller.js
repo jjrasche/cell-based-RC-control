@@ -3,7 +3,7 @@
 // rc flying controller
 var canvas = document.getElementById("canvasSignature");
 var objects = {};
-objects.rightStick = joystick(canvas, 350, 300);
+objects.rightStick = new JoyStick(canvas, 350, 300);//joystick(canvas, 350, 300);
 //objects.leftStick = joystick(canvas, 150, 300);
 
 function initialize(dataChannel) {
@@ -29,7 +29,10 @@ function initialize(dataChannel) {
     },
 
     mousedown: function (coors, obj, event) {
-      canvas.addEventListener('mousemove', move, false);
+      //canvas.addEventListener('mousemove', move, false);
+      //obj.blah();
+      console.log(obj.effect, event);
+      console.log(obj.effect[event]);
       obj.effect[event](coors);
       transmit(coors, event);
     },
@@ -61,6 +64,7 @@ function initialize(dataChannel) {
   function getEffectedObject(coors) {
   	var obj = null;
   	for (var key in objects) {
+      console.log("getEffectedObject: ", objects[key]);
   		if (objects[key].effectedByGesture(coors) || objects[key].pressed) {
   			if (obj != null) throw "multiple effected objects";
   			obj = objects[key];
@@ -105,10 +109,10 @@ function initialize(dataChannel) {
   }
 
 
-  canvas.addEventListener('touchstart', move, false);
-  canvas.addEventListener('touchend', move, false);
+  // canvas.addEventListener('touchstart', move, false);
+  // canvas.addEventListener('touchend', move, false);
   canvas.addEventListener('mousedown', move, false);
-  canvas.addEventListener('mouseup', move, false);
+  // canvas.addEventListener('mouseup', move, false);
 
   // prevent elastic scrolling
   canvas.addEventListener('touchmove',function (event) {event.preventDefault();},false); 
