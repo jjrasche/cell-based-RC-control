@@ -191,7 +191,7 @@ window.onbeforeunload = function(e){
 
 /////////////////////////////////////////////////////////
 $(document).ready(function () {
-  initialize(sendChannel);
+  controller(sendChannel);
 });
 // the contstructor prototype must request ICE candidate and call oncandidate func
 function createPeerConnection() {
@@ -211,7 +211,7 @@ function createPeerConnection() {
   if (isInitiator) {
     try {
       sendChannel = pc.createDataChannel("sendDataChannel", {reliable: false});
-      initialize(sendChannel);
+      controller(sendChannel);
       console.log('Created send data channel');
     } catch (e) {
       alert('Failed to create data channel. ' +

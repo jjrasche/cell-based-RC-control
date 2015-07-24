@@ -4,16 +4,25 @@
 var canvas = document.getElementById("canvasSignature");
 var objects = {};
 objects.rightStick = new JoyStick(canvas, 350, 300);//joystick(canvas, 350, 300);
-//objects.leftStick = joystick(canvas, 150, 300);
+objects.leftStick = new JoyStick(canvas, 150, 300);
 
-function initialize(dataChannel) {
+function controller(dataChannel) {
   // get references to the canvas element as well as the 2D drawing context
   // dataChannel.onmessage = controllerRecvMsg;
-
+  var context = canvas.getContext("2d");
   drawController();
+
+  function drawController() {
+    context.clearRect(0,0,canvas.width,canvas.height); 
+    for (var key in objects) {
+      console.log(key);
+      objects[key].draw();
+    }
+  }
 
   var actions = {
     touchstart: function (coors, obj, event) {
+      commOut.innerHTML = coors.x + "  " + coors.y;
       canvas.addEventListener('touchmove', move, false);
       obj.effect[event](coors);
       transmit(coors, event);
@@ -29,10 +38,7 @@ function initialize(dataChannel) {
     },
 
     mousedown: function (coors, obj, event) {
-      //canvas.addEventListener('mousemove', move, false);
-      //obj.blah();
-      console.log(obj.effect, event);
-      console.log(obj.effect[event]);
+      canvas.addEventListener('mousemove', move, false);
       obj.effect[event](coors);
       transmit(coors, event);
     },
@@ -42,7 +48,6 @@ function initialize(dataChannel) {
     },
     mouseup: function (coors, obj, event) {
       obj.effect[event](coors);
-      console.log("lasjfljdflskjdf");
       transmit(coors, event);
       canvas.removeEventListener('mousemove', move, false);
     }
@@ -54,22 +59,15 @@ function initialize(dataChannel) {
     // dataChannel.send(JSON.stringify(obj));
   }
 
-  function drawController() {
-  	for (var key in objects) {
-  		objects[key].draw();
-  	}
-  }
-
   // return any objects that are newly effected, or currently pressed
   function getEffectedObject(coors) {
   	var obj = null;
   	for (var key in objects) {
-      console.log("getEffectedObject: ", objects[key]);
-  		if (objects[key].effectedByGesture(coors) || objects[key].pressed) {
+  		if (objects[key].effectedByGesture(coors) || objects[key].isFocusedOn()) {
   			if (obj != null) throw "multiple effected objects";
   			obj = objects[key];
 
-  			console.log(key + " effected: " + objects[key].effectedByGesture(coors) + " " + objects[key].pressed + " " + obj);
+  			console.log(key + " effected: " + objects[key].effectedByGesture(coors) + " " + objects[key].isFocusedOn() + " " + obj);
   		}
   	}
   	return obj;
@@ -102,17 +100,16 @@ function initialize(dataChannel) {
     var obj = getEffectedObject(coors);
     console.log(event.type, obj);
     if (obj != null) {
-      //console.log(obj);
 	    actions[event.type](coors, obj, event.type);
 	    drawController();
 	   }
   }
 
 
-  // canvas.addEventListener('touchstart', move, false);
-  // canvas.addEventListener('touchend', move, false);
+  canvas.addEventListener('touchstart', move, false);
+  canvas.addEventListener('touchend', move, false);
   canvas.addEventListener('mousedown', move, false);
-  // canvas.addEventListener('mouseup', move, false);
+  canvas.addEventListener('mouseup', move, false);
 
   // prevent elastic scrolling
   canvas.addEventListener('touchmove',function (event) {event.preventDefault();},false); 
